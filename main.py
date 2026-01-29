@@ -1,103 +1,83 @@
 import os
 import asyncio
-import logging
 import subprocess
-from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters
-)
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
+from aiogram.enums import ParseMode
 
-# ================= CONFIG =================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 CHANNEL_LINK = "https://t.me/PROFESSORXZAMINHACKER"
 DEVELOPER_ID = "@SIGMAXZAMIN"
 
-# ================= LOGGING =================
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+dp = Dispatcher()
 
-# ================= START =================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🚀 *Multi Saver Bot*\n\n"
+
+# 🔹 START COMMAND
+@dp.message(CommandStart())
+async def start(message: types.Message):
+    await message.answer(
+        "🚀 <b>Multi Saver Bot</b>\n\n"
         "📥 Send any video link\n"
         "⚡ Fast & Simple\n\n"
-        f"👨‍💻 Dev: {DEVELOPER_ID}",
-        parse_mode="Markdown"
+        "👇 Send link to start\n\n"
+        f"📢 Channel: <a href='{CHANNEL_LINK}'>Join</a>\n"
+        f"👨‍💻 Developer: {DEVELOPER_ID}"
     )
 
-# ================= DOWNLOAD FUNCTION =================
-async def download_video(url: str, chat_id, app):
-    try:
-        cmd = [
-            "yt-dlp",
-            "-f",
-            "mp4",
-            "-o",
-            "video.%(ext)s",
-            url
-        ]
 
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        await process.communicate()
+# 🔹 HANDLE LINKS
+@dp.message()
+async def download_video(message: types.Message):
+    url = message.text.strip()
 
-        for file in os.listdir():
-            if file.startswith("video."):
-                await app.bot.send_video(
-                    chat_id=chat_id,
-                    video=open(file, "rb"),
-                    caption="📥 Downloaded Successfully\n"
-                            f"👨‍💻 {DEVELOPER_ID}"
-                )
-                os.remove(file)
-                return
-
-        await app.bot.send_message(chat_id, "❌ Download failed")
-
-    except Exception as e:
-        await app.bot.send_message(chat_id, f"⚠️ Error:\n{e}")
-
-# ================= HANDLE LINKS =================
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    chat_id = update.message.chat_id
-
-    rocket = await update.message.reply_text("🚀")
-    await asyncio.sleep(2)
-    await rocket.delete()
-
-    if not text.startswith("http"):
-        await update.message.reply_text(
-            "❌ Invalid link\n\n"
-            "📥 Send a valid video URL"
+    if not url.startswith("http"):
+        await message.answer(
+            "❌ <b>Invalid link</b>\n"
+            "Send a valid video URL 🔗"
         )
         return
 
-    await update.message.reply_text("📥 Downloading… please wait")
-    await download_video(text, chat_id, context.application)
+    processing = await message.answer("🚀 Processing...")
 
-# ================= MAIN =================
-def main():
-    if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN not found")
+    file_name = "video.mp4"
 
-    app = Application.builder().token(BOT_TOKEN).build()
+    try:
+        # 🔥 yt-dlp download
+        cmd = [
+            "yt-dlp",
+            "-f", "mp4",
+            "-o", file_name,
+            url
+        ]
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        subprocess.run(cmd, check=True)
 
-    print("🤖 Bot is running")
-    app.run_polling()
+        await processing.delete()
+
+        await message.answer_video(
+            video=types.FSInputFile(file_name),
+            caption=f"📥 <b>Downloaded Successfully</b>\n\n👨‍💻 {DEVELOPER_ID}"
+        )
+
+    except Exception as e:
+        await processing.delete()
+        await message.answer(
+            "❌ <b>Download failed</b>\n"
+            "Link not supported or error occurred"
+        )
+
+    finally:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+
+
+# 🔹 RUN BOT
+async def main():
+    print("Bot started successfully")
+    await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
