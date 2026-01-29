@@ -1,83 +1,101 @@
+import telebot
 import os
-import asyncio
-import subprocess
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
-from aiogram.enums import ParseMode
+import time
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 CHANNEL_LINK = "https://t.me/PROFESSORXZAMINHACKER"
 DEVELOPER_ID = "@SIGMAXZAMIN"
+BOT_USERNAME = "@ZAMINXMILTISAVEBOT"
 
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
-dp = Dispatcher()
+bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 
 
-# 🔹 START COMMAND
-@dp.message(CommandStart())
-async def start(message: types.Message):
-    await message.answer(
-        "🚀 <b>Multi Saver Bot</b>\n\n"
-        "📥 Send any video link\n"
-        "⚡ Fast & Simple\n\n"
-        "👇 Send link to start\n\n"
-        f"📢 Channel: <a href='{CHANNEL_LINK}'>Join</a>\n"
-        f"👨‍💻 Developer: {DEVELOPER_ID}"
+def main_keyboard():
+    kb = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("📥 Start Downloading")
+    kb.add("📢 Official Channel", "👨‍💻 Developer")
+    return kb
+
+
+@bot.message_handler(commands=["start"])
+def start(message):
+    name = message.from_user.first_name
+    text = f"""
+━━━━━━━━━━━━━━━━━━━━━━━
+🚀 <b>MULTI SAVER BOT</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+👋 Welcome <b>{name}</b>
+
+📥 Download from multiple platforms  
+⚡ Fast • Clean • Simple  
+
+👇 Press the button below to start
+
+━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    bot.send_message(message.chat.id, text, reply_markup=main_keyboard())
+
+
+@bot.message_handler(func=lambda m: m.text == "📥 Start Downloading")
+def ask_link(message):
+    bot.send_message(
+        message.chat.id,
+        "📎 <b>Send your video link</b>\n\n"
+        "Supported: Instagram • Facebook • Twitter • More\n\n"
+        "⚠️ Invalid links will be rejected"
     )
 
 
-# 🔹 HANDLE LINKS
-@dp.message()
-async def download_video(message: types.Message):
-    url = message.text.strip()
+@bot.message_handler(func=lambda m: m.text == "📢 Official Channel")
+def channel(message):
+    bot.send_message(
+        message.chat.id,
+        f"📢 <b>OFFICIAL CHANNEL</b>\n\n"
+        f"Updates • Features • Tools\n\n"
+        f"👉 Join now:\n{CHANNEL_LINK}"
+    )
 
-    if not url.startswith("http"):
-        await message.answer(
-            "❌ <b>Invalid link</b>\n"
-            "Send a valid video URL 🔗"
+
+@bot.message_handler(func=lambda m: m.text == "👨‍💻 Developer")
+def dev(message):
+    bot.send_message(
+        message.chat.id,
+        f"👨‍💻 <b>Developer</b>\n\n{DEVELOPER_ID}"
+    )
+
+
+@bot.message_handler(func=lambda m: True)
+def handle_link(message):
+    if "http" not in message.text:
+        bot.send_message(
+            message.chat.id,
+            "❌ <b>Invalid Link</b>\n\n"
+            "Please send a valid video URL 🔗"
         )
         return
 
-    processing = await message.answer("🚀 Processing...")
+    temp = bot.send_message(message.chat.id, "🚀")
+    time.sleep(2)
+    bot.delete_message(message.chat.id, temp.message_id)
 
-    file_name = "video.mp4"
+    bot.send_message(
+        message.chat.id,
+        f"""
+━━━━━━━━━━━━━━━━━━━━━━━
+📥 <b>Processing Link</b>
 
-    try:
-        # 🔥 yt-dlp download
-        cmd = [
-            "yt-dlp",
-            "-f", "mp4",
-            "-o", file_name,
-            url
-        ]
+Your link is received  
+Downloading will start shortly…
 
-        subprocess.run(cmd, check=True)
+⚡ Please wait
+━━━━━━━━━━━━━━━━━━━━━━━
 
-        await processing.delete()
-
-        await message.answer_video(
-            video=types.FSInputFile(file_name),
-            caption=f"📥 <b>Downloaded Successfully</b>\n\n👨‍💻 {DEVELOPER_ID}"
-        )
-
-    except Exception as e:
-        await processing.delete()
-        await message.answer(
-            "❌ <b>Download failed</b>\n"
-            "Link not supported or error occurred"
-        )
-
-    finally:
-        if os.path.exists(file_name):
-            os.remove(file_name)
+👨‍💻 {DEVELOPER_ID}
+"""
+    )
 
 
-# 🔹 RUN BOT
-async def main():
-    print("Bot started successfully")
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+print("🤖 Multi Saver Bot is running...")
+bot.infinity_polling(skip_pending=True)
