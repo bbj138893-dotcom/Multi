@@ -1,78 +1,41 @@
 import telebot
 import os
+import subprocess
 import time
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 CHANNEL_LINK = "https://t.me/PROFESSORXZAMINHACKER"
 DEVELOPER_ID = "@SIGMAXZAMIN"
-BOT_USERNAME = "@ZAMINXMILTISAVEBOT"
 
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 
 
-def main_keyboard():
-    kb = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("📥 Start Downloading")
-    kb.add("📢 Official Channel", "👨‍💻 Developer")
-    return kb
-
-
 @bot.message_handler(commands=["start"])
 def start(message):
-    name = message.from_user.first_name
-    text = f"""
-━━━━━━━━━━━━━━━━━━━━━━━
-🚀 <b>MULTI SAVER BOT</b>
-━━━━━━━━━━━━━━━━━━━━━━━
+    bot.send_message(
+        message.chat.id,
+        f"""
+🚀 <b>Multi Saver Bot</b>
 
-👋 Welcome <b>{name}</b>
+👋 Welcome <b>{message.from_user.first_name}</b>
 
-📥 Download from multiple platforms  
-⚡ Fast • Clean • Simple  
+📥 Instagram Video Downloader
+⚡ Fast • Clean • Real
 
-👇 Press the button below to start
-
-━━━━━━━━━━━━━━━━━━━━━━━
+👇 Send Instagram link
 """
-    bot.send_message(message.chat.id, text, reply_markup=main_keyboard())
-
-
-@bot.message_handler(func=lambda m: m.text == "📥 Start Downloading")
-def ask_link(message):
-    bot.send_message(
-        message.chat.id,
-        "📎 <b>Send your video link</b>\n\n"
-        "Supported: Instagram • Facebook • Twitter • More\n\n"
-        "⚠️ Invalid links will be rejected"
-    )
-
-
-@bot.message_handler(func=lambda m: m.text == "📢 Official Channel")
-def channel(message):
-    bot.send_message(
-        message.chat.id,
-        f"📢 <b>OFFICIAL CHANNEL</b>\n\n"
-        f"Updates • Features • Tools\n\n"
-        f"👉 Join now:\n{CHANNEL_LINK}"
-    )
-
-
-@bot.message_handler(func=lambda m: m.text == "👨‍💻 Developer")
-def dev(message):
-    bot.send_message(
-        message.chat.id,
-        f"👨‍💻 <b>Developer</b>\n\n{DEVELOPER_ID}"
     )
 
 
 @bot.message_handler(func=lambda m: True)
-def handle_link(message):
-    if "http" not in message.text:
+def download_instagram(message):
+    url = message.text
+
+    if "instagram.com" not in url:
         bot.send_message(
             message.chat.id,
-            "❌ <b>Invalid Link</b>\n\n"
-            "Please send a valid video URL 🔗"
+            "❌ <b>Invalid Link</b>\n\nSend a valid Instagram video URL"
         )
         return
 
@@ -80,22 +43,31 @@ def handle_link(message):
     time.sleep(2)
     bot.delete_message(message.chat.id, temp.message_id)
 
-    bot.send_message(
-        message.chat.id,
-        f"""
-━━━━━━━━━━━━━━━━━━━━━━━
-📥 <b>Processing Link</b>
+    bot.send_message(message.chat.id, "📥 <b>Downloading video…</b>\nPlease wait ⚡")
 
-Your link is received  
-Downloading will start shortly…
+    try:
+        filename = f"video_{message.chat.id}.mp4"
 
-⚡ Please wait
-━━━━━━━━━━━━━━━━━━━━━━━
+        subprocess.run(
+            ["yt-dlp", "-o", filename, url],
+            check=True
+        )
 
-👨‍💻 {DEVELOPER_ID}
-"""
-    )
+        with open(filename, "rb") as video:
+            bot.send_video(
+                message.chat.id,
+                video,
+                caption=f"✅ <b>Downloaded</b>\n\n👨‍💻 {DEVELOPER_ID}"
+            )
+
+        os.remove(filename)
+
+    except Exception as e:
+        bot.send_message(
+            message.chat.id,
+            "❌ <b>Download failed</b>\n\nVideo may be private or restricted"
+        )
 
 
-print("🤖 Multi Saver Bot is running...")
+print("🤖 Bot running with REAL downloader")
 bot.infinity_polling(skip_pending=True)
